@@ -19,8 +19,8 @@ class CadParameters(BaseModel):
     type: str  # "gridfinity_bin", "gridfinity_base", "hsw_plug", "hsw_wall"
     params: Dict[str, Any]
 
-# Placeholder for LLM Service (to be implemented in llm_service.py)
 # from llm_service import parse_prompt_to_params
+from llm_service import parse_prompt_to_params
 
 from gridfinity_generator import generate_gridfinity_bin
 from hsw_generator import generate_hsw_plug
@@ -35,32 +35,28 @@ async def generate_model(request: GenerationRequest):
     Generates a 3D model based on the input prompt.
     """
     try:
-        # Integrated Mock LLM Parser or Simple Logic
-        # For this stage, we simply map based on keywords
+        # Parse Request
+        parsed_request = parse_prompt_to_params(request.prompt)
+        req_type = parsed_request.get("type")
+        params = parsed_request.get("params", {})
         
-        prompt_lower = request.prompt.lower()
         result = None
         
-        if "gridfinity" in prompt_lower:
-            # Parse simple dimensions if present, e.g., "3x2"
-            # Very basic parsing for demo
-            width = 1
-            depth = 1
-            height = 3
+        if req_type == "gridfinity_bin":
+            result = generate_gridfinity_bin(
+                width_units=params.get("width_units", 1),
+                depth_units=params.get("depth_units", 1),
+                height_units=params.get("height_units", 3),
+                holes=params.get("holes", True)
+            )
             
-            import re
-            match = re.search(r"(\d+)x(\d+)", prompt_lower)
-            if match:
-                width = int(match.group(1))
-                depth = int(match.group(2))
+        elif req_type == "hsw_plug":
+            result = generate_hsw_plug(
+                variant=params.get("variant", "standard")
+            )
             
-            result = generate_gridfinity_bin(width, depth, height)
-            
-        elif "hsw" in prompt_lower:
-             # Default HSW plug
-            result = generate_hsw_plug(variant="standard")
         else:
-            raise HTTPException(status_code=400, detail="Unknown request type. Try 'gridfinity 2x3' or 'hsw plug'.")
+            raise HTTPException(status_code=400, detail="Unknown request type. Try 'gridfinity 3x2' or 'hsw plug'.")
 
         # Export logic
         with tempfile.NamedTemporaryFile(delete=False, suffix=".glb") as tmp:
