@@ -22,6 +22,9 @@ class CadParameters(BaseModel):
 # Placeholder for LLM Service (to be implemented in llm_service.py)
 # from llm_service import parse_prompt_to_params
 
+from gridfinity_generator import generate_gridfinity_bin
+from hsw_generator import generate_hsw_plug
+
 @app.get("/health")
 async def health_check():
     return {"status": "healthy", "service": "antigravity-backend"}
@@ -30,55 +33,47 @@ async def health_check():
 async def generate_model(request: GenerationRequest):
     """
     Generates a 3D model based on the input prompt.
-    Currently maps prompt to hardcoded parameters for demonstration.
     """
     try:
-        # TODO: Integrate LLM here to parse request.prompt -> CadParameters
-        # For now, we'll use a simple keyword match
+        # Integrated Mock LLM Parser or Simple Logic
+        # For this stage, we simply map based on keywords
         
         prompt_lower = request.prompt.lower()
+        result = None
         
         if "gridfinity" in prompt_lower:
-            # Default 1x1 bin
-            result = generate_gridfinity_bin(width=1, depth=1, height=3)
+            # Parse simple dimensions if present, e.g., "3x2"
+            # Very basic parsing for demo
+            width = 1
+            depth = 1
+            height = 3
+            
+            import re
+            match = re.search(r"(\d+)x(\d+)", prompt_lower)
+            if match:
+                width = int(match.group(1))
+                depth = int(match.group(2))
+            
+            result = generate_gridfinity_bin(width, depth, height)
+            
         elif "hsw" in prompt_lower:
              # Default HSW plug
-            result = generate_hsw_plug()
+            result = generate_hsw_plug(variant="standard")
         else:
-            raise HTTPException(status_code=400, detail="Unknown request type. Try 'gridfinity' or 'hsw'.")
+            raise HTTPException(status_code=400, detail="Unknown request type. Try 'gridfinity 2x3' or 'hsw plug'.")
 
         # Export logic
         with tempfile.NamedTemporaryFile(delete=False, suffix=".glb") as tmp:
             # CadQuery export
-            # Note: GLTF export in CadQuery might need specific handling or an exporter
-            # For simplicity in this step, we pretend to export. 
-            # Real implementation will function properly.
-            
-            # Using basic export for now to verify CQ is working
+            # Using basic export for now 
             cq.exporters.export(result, tmp.name, exportType="GLTF")
             
             return FileResponse(tmp.name, media_type="model/gltf-binary", filename="model.glb")
 
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
-
-def generate_gridfinity_bin(width=1, depth=1, height=3):
-    """
-    Generates a Gridfinity bin using cadquery/cq-gridfinity.
-    """
-    # Placeholder: Simple box for now until specific library is fully integrated
-    # Real implementation will use cq-gridfinity classes
-    box = cq.Workplane("XY").box(42 * width, 42 * depth, 7 * height)
-    return box
-
-def generate_hsw_plug():
-    """
-    Generates a generic HSW plug.
-    """
-    # Placeholder: Hexagon
-    # Hexagon radius approx 12mm flat-to-flat? standard is roughly that.
-    plug = cq.Workplane("XY").polygon(6, 12).extrude(10)
-    return plug
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
