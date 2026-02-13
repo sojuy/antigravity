@@ -16,6 +16,9 @@
     "@types/three": "^0.182.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "@babylonjs/core": "^6.0.0",
+    "@babylonjs/loaders": "^6.0.0",
+    "@babylonjs/gui": "^6.0.0",
     "three": "^0.182.0"
   },
   "devDependencies": {
